@@ -25,7 +25,8 @@ const char*     password = STAPSK;
 const char*     host = "192.168.0.35"; //192.168.0.1 ftp 서버 주소
 const uint16_t  port = 20;            //20 ftp 서버 포트 번호
 
-const String carNumber = "01";
+const String carNumber = "01";  // 고유 번호
+const String carName = "TEST";  // 별칭
 
 
 int isJesusschool = 0;
@@ -110,6 +111,12 @@ void scanWiFiList() {
 String path = "EntryInfo/"+carNumber;
 bool sendIn(){
   long atime = millis();
+  //name 변경 _ name should be updated only when carNumber was not registered to DB
+  Firebase.setString(path+"/name", carName);
+  if (Firebase.failed()) {
+      Serial.print("updating /name failed:");
+      Serial.println(Firebase.error());
+  }
   //IO 변경
   Firebase.setBool(path+"/IO", true);
   if (Firebase.failed()) {
@@ -144,6 +151,12 @@ bool sendIn(){
 }
 bool sendOut(){
   long atime = millis();
+  //name 변경 _ name should be updated only when carNumber was not registered to DB
+  Firebase.setString(path+"/name", carName);
+  if (Firebase.failed()) {
+      Serial.print("updating /name failed:");
+      Serial.println(Firebase.error());
+  }
   // IO 변경
   Firebase.setBool(path+"/IO", false);
   if (Firebase.failed()) {
