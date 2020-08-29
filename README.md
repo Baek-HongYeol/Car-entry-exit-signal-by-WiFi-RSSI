@@ -6,5 +6,7 @@ https://github.com/nimaltd/FTP_Client based on https://github.com/blackcodetaver
 
 using Lolin D1 mini board(WeMos D1 mini)
 
-STASSID : objective
-TESTSSID : instead of STASSID or compare to STASSID
+FTP_Client library was modified.
+- isConnected variable added from _isConnected in ESP32_FTPClient
+- isAvailable() function added from isConnected() in ESP32_FTPClient
+- variable port added for other server's port
