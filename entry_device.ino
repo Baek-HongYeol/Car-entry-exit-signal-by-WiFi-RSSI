@@ -18,7 +18,7 @@
 #endif
 
 #ifndef LIMITRSSI
-#define LIMITRSSI -65
+#define LIMITRSSI -60
 #endif
 
 #define serialDBG
@@ -30,8 +30,6 @@ const String carNumber = "01";  // 고유 번호 (DB Ref key, 01,02,03 )
 const String carName = "TEST";  // 별칭
 
 
-int isJesusschool = 0;
-int isTestAP = 0;
 int jesusschool = 0;
 int testAP = 0;
 bool signal_IO = false;
@@ -67,8 +65,8 @@ void scanWiFiList() {
   Serial.println();
   Serial.println("Searching AP List..");
   int num_Of_Networks = WiFi.scanNetworks();
-  isJesusschool = 0;
-  isTestAP = 0;
+  int isJesusschool = 0;
+  int isTestAP = 0;
   for (int i = 0; i < num_Of_Networks; i++) {
     if (WiFi.SSID(i).equals(STASSID)) {
       Serial.println("StaAP Founded--");
@@ -77,19 +75,19 @@ void scanWiFiList() {
       Serial.println(jesusschool);
       isJesusschool = 1;
       signal_IO = true;
-    }
+    }/*
     #ifdef TESTSSID
     else if (WiFi.SSID(i).equals(TESTSSID)) {
       Serial.println("TestAP Founded--");
       testAP = WiFi.RSSI(i);
       isTestAP = 1;
     }
-    #endif
+    #endif*/
   }
-  if (jesusschool<LIMITRSSI){
+  if (jesusschool<LIMITRSSI || jesusschool == 0){
     signal_IO = false;
   }
-  if (isJesusschool == 0 || jesusschool < LIMITRSSI ) {
+  if (isJesusschool == 0) {
     jesusschool = 0;
   }
   if (isTestAP == 0 || testAP < LIMITRSSI) {
@@ -285,13 +283,9 @@ void loop() {
 
   //when IO state changed, or every 10 seconds when it have IN state, sendStatus.
   if(WiFi.status() == WL_CONNECTED && (isChanged() || (signal_IO && millis()-startTime >10000))){
-    startTime = millis();
-    for(current = startTime; millis() - current < 10000;){
-      if(sendStatus(signal_IO)){
-        previous = signal_IO;
-        break;
-      }
-      delay(500);
+    if(sendStatus(signal_IO)){
+      previous = signal_IO;
+      break;
     }
   }
   
