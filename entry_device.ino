@@ -13,8 +13,12 @@
 #include <ESP8266WiFi.h>
 
 #ifndef STASSID
-#define STASSID "jesusschool"
-#define STAPSK  "****"
+#define STASSID "jesusschool2"
+#define STAPSK  "************"
+#endif
+
+#ifndef LIMITRSSI
+#define LIMITRSSI -65
 #endif
 
 #define serialDBG
@@ -22,10 +26,7 @@
 
 const char*     ssid     = STASSID;
 const char*     password = STAPSK;
-const char*     host = "192.168.0.35"; //192.168.0.1 ftp 서버 주소
-const uint16_t  port = 20;            //20 ftp 서버 포트 번호
-
-const String carNumber = "01";  // 고유 번호
+const String carNumber = "01";  // 고유 번호 (DB Ref key, 01,02,03 )
 const String carName = "TEST";  // 별칭
 
 
@@ -85,13 +86,13 @@ void scanWiFiList() {
     }
     #endif
   }
-  if (jesusschool<-80){
+  if (jesusschool<LIMITRSSI){
     signal_IO = false;
   }
-  if (isJesusschool == 0 || jesusschool < -90 ) {
+  if (isJesusschool == 0 || jesusschool < LIMITRSSI ) {
     jesusschool = 0;
   }
-  if (isTestAP == 0 || testAP < -90) {
+  if (isTestAP == 0 || testAP < LIMITRSSI) {
     testAP = -100;
   }
 
@@ -114,39 +115,65 @@ bool sendIn(){
   //name 변경 _ name should be updated only when carNumber was not registered to DB
   Firebase.setString(path+"/name", carName);
   if (Firebase.failed()) {
+      #ifdef serialDBG
       Serial.print("updating /name failed:");
       Serial.println(Firebase.error());
+      #endif
   }
   //IO 변경
   Firebase.setBool(path+"/IO", true);
   if (Firebase.failed()) {
+      #ifdef serialDBG
       Serial.print("updating /IO failed:");
       Serial.println(Firebase.error());
+      Serial.println("update /bootedTime");
+      Serial.print("function spends ");
+      Serial.print(millis()-atime);
+      Serial.println("ms.");
+      #endif
       return false;
   }
+  #ifdef serialDBG
   Serial.println("update /IO");
+  #endif
   //RSSI 변경
   int rss = WiFi.RSSI();
   Firebase.setInt(path+"/RSSI", rss);
   if (Firebase.failed()) {
+      #ifdef serialDBG
       Serial.print("updating /RSSI failed:");
       Serial.println(Firebase.error());
+      Serial.println("update /bootedTime");
+      Serial.print("function spends ");
+      Serial.print(millis()-atime);
+      Serial.println("ms.");
+      #endif
       return false;
   }
+  #ifdef serialDBG
   Serial.println("update /RSSI");
+  #endif
   //bootedTime 변경
   long bootedTime = millis();
   String text = String(bootedTime);
   Firebase.setString(path+"/bootedTime", text+"ms");
   if (Firebase.failed()) {
+      #ifdef serialDBG
       Serial.print("updating /bootedTime failed:");
       Serial.println(Firebase.error());
+      Serial.println("update /bootedTime");
+      Serial.print("function spends ");
+      Serial.print(millis()-atime);
+      Serial.println("ms.");
+      #endif
       return false;
   }
+  #ifdef serialDBG
   Serial.println("update /bootedTime");
-   Serial.print("function spends ");
+  Serial.print("function spends ");
   Serial.print(millis()-atime);
   Serial.println("ms.");
+  #endif
   return true;
 }
 bool sendOut(){
@@ -154,22 +181,36 @@ bool sendOut(){
   //name 변경 _ name should be updated only when carNumber was not registered to DB
   Firebase.setString(path+"/name", carName);
   if (Firebase.failed()) {
+      #ifdef serialDBG
       Serial.print("updating /name failed:");
       Serial.println(Firebase.error());
+      #endif
   }
   // IO 변경
   Firebase.setBool(path+"/IO", false);
   if (Firebase.failed()) {
+      #ifdef serialDBG
       Serial.print("updating /IO failed:");
       Serial.println(Firebase.error());
+      Serial.println("update /bootedTime");
+      Serial.print("function spends ");
+      Serial.print(millis()-atime);
+      Serial.println("ms.");
+      #endif
       return false;
   }
   // RSSI 변경
   int rss = WiFi.RSSI();
   Firebase.setInt(path+"/RSSI", rss);
   if (Firebase.failed()) {
+      #ifdef serialDBG
       Serial.print("updating /RSSI failed:");
       Serial.println(Firebase.error());
+      Serial.println("update /bootedTime");
+      Serial.print("function spends ");
+      Serial.print(millis()-atime);
+      Serial.println("ms.");
+      #endif
       return false;
   }
   // bootedTime 변경
@@ -177,27 +218,41 @@ bool sendOut(){
   String text = String(bootedTime);
   Firebase.setString(path+"/bootedTime", text+"ms");
   if (Firebase.failed()) {
+    #ifdef serialDBG
       Serial.print("updating /bootedTime failed:");
       Serial.println(Firebase.error());
+      Serial.println("update /bootedTime");
+      Serial.print("function spends ");
+      Serial.print(millis()-atime);
+      Serial.println("ms.");
+      #endif
       return false;
   }
+  #ifdef serialDBG
   Serial.print("function spends ");
   Serial.print(millis()-atime);
   Serial.println("ms.");
+  #endif
   return true;
 }
 
 bool sendStatus(bool sig){
   if(sig){
+    #ifdef serialDBG
+    Serial.println("send IN signal");
+    #endif
     return sendIn();
   }
   else{
+    #ifdef serialDBG
+    Serial.println("send OUT signal");
+    #endif
     return sendOut();
   }
 }
 
 bool isChanged(){
-  if(previous^signal_IO){
+  if(previous!=signal_IO){
     //previous = signal_IO;
     return true;
   }
@@ -228,8 +283,8 @@ void loop() {
   //delay(500);
   unsigned long current=0;
 
-  //when IO state changed, or every 10 seconds when it have In state, sendStatus.
-  if((isChanged() || (millis()-startTime >10000 && signal_IO))&& WiFi.status() == WL_CONNECTED){
+  //when IO state changed, or every 10 seconds when it have IN state, sendStatus.
+  if(WiFi.status() == WL_CONNECTED && (isChanged() || (signal_IO && millis()-startTime >10000))){
     startTime = millis();
     for(current = startTime; millis() - current < 10000;){
       if(sendStatus(signal_IO)){
@@ -241,7 +296,7 @@ void loop() {
   }
   
   #ifdef serialDBG
-  Serial.println("Delay 3 seconds");
+  Serial.println("Delay 1 seconds");
   #endif
-  delay(3000); // execute once every 3 seconds, don't flood remote service
+  delay(1000); // execute once every 1 seconds, don't flood remote service
 }
